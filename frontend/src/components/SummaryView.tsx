@@ -3,7 +3,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AlertTriangle, CheckCircle, AlertCircle, FileText } from "lucide-react";
-import { EmptyState } from "./EmptyState";
 
 interface RiskClause {
   text: string;
@@ -91,8 +90,16 @@ const SummaryView = ({ summary, riskClauses = [], fileName, isLoading = false }:
     );
   }
 
-  if (!summary && !fileName) {
-    return <EmptyState />;
+  if (!summary || !fileName) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[calc(100vh-12rem)] space-y-4">
+        <FileText className="h-16 w-16 text-muted-foreground/50" />
+        <h3 className="text-xl font-semibold text-foreground">No Document Selected</h3>
+        <p className="text-muted-foreground text-center max-w-sm">
+          Upload a document to see its analysis here. The AI will analyze the content and provide a summary with risk assessment.
+        </p>
+      </div>
+    );
   }
 
   return (
@@ -102,7 +109,7 @@ const SummaryView = ({ summary, riskClauses = [], fileName, isLoading = false }:
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <FileText className="h-5 w-5 text-primary" />
-            <span>Document Analysis - {fileName}</span>
+            <span>Document Analysis</span>
           </CardTitle>
           <p className="text-sm text-muted-foreground">{fileName}</p>
         </CardHeader>

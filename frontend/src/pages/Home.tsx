@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Brain, FileText, Shield, Zap, ArrowRight, CheckCircle, Mail, Phone, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import heroImage from '@/assets/hero.jpeg';
 const Home = () => {
   const features = [
@@ -49,6 +50,7 @@ const Home = () => {
               <span className="text-xl font-bold text-foreground">AI DocAnalyzer</span>
             </div>
             <div className="flex items-center space-x-4">
+              <ThemeToggle />
               <Link to="/login">
                 <Button variant="ghost">Login</Button>
               </Link>

@@ -1,12 +1,13 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import axios from "axios";
+import { ThemeToggle } from '@/components/ThemeToggle';
 import UploadPage from "@/components/UploadPage";
 import SummaryView from "@/components/SummaryView";
 import Chatbot from "@/components/Chatbot";
-
 import { toast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -16,7 +17,6 @@ import {
   Download, Share2, Trash2, MoreVertical,
   BarChart3, FileBarChart
 } from "lucide-react";
-import Navbar from "@/components/Navbar";
 
 interface DocumentData {
   summary: string;
@@ -47,7 +47,14 @@ export default function Dashboard() {
   const [documentData, setDocumentData] = useState<DocumentData | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isChatLoading, setIsChatLoading] = useState(false);
-  const [stats, setStats] = useState<Stats>({
+  const uploadSectionRef = useRef<HTMLDivElement>(null);
+  
+  const scrollToUpload = useCallback(() => {
+    uploadSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, []);
+  
+  // Mock statistics
+  const [stats] = useState<Stats>({
     totalDocuments: 15,
     riskBreakdown: {
       high: 3,
@@ -60,11 +67,6 @@ export default function Dashboard() {
       { name: "Terms_of_Service.pdf", date: "2025-08-23", riskLevel: "medium" },
     ]
   });
-  const uploadSectionRef = useRef<HTMLDivElement>(null);
-  
-  const scrollToUpload = () => {
-    uploadSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
 
   const handleFileUpload = async (file: File) => {
     setIsUploading(true);
@@ -157,13 +159,12 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar />
-      
+     
       <motion.main
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="container min-h-screen py-8 px-8 md:px-12 lg:px-24 space-y-12"
+        className="container min-h-screen py-8 space-y-12"
       >
         {/* Hero Section */}
         <motion.div 
@@ -178,10 +179,18 @@ export default function Dashboard() {
               AI-powered legal document analysis and risk assessment
             </p>
           </div>
-          <Button size="lg" className="gap-2 md:self-end" onClick={scrollToUpload}>
+         
+         <div   className="space-x-2">
+            
+             <Button size="lg" className="gap-2 md:self-end" onClick={scrollToUpload}>
             <FilePlus className="h-5 w-5" />
             New Analysis
           </Button>
+
+          <ThemeToggle />
+         </div>
+         
+            
         </motion.div>
 
         {/* Stats Grid */}

@@ -64,13 +64,16 @@ const Login = () => {
         className="w-full max-w-md"
       >
         {/* Back to Home */}
-        <Link 
-          to="/" 
-          className="inline-flex items-center text-muted-foreground hover:text-foreground transition-colors mb-6"
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Home
-        </Link>
+        <div className="flex items-center justify-between mb-6">
+          <Link 
+            to="/" 
+            className="inline-flex items-center text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Home
+          </Link>
+          
+        </div>
 
         <Card>
           <CardHeader className="text-center space-y-4">
