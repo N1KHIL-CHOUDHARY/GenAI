@@ -4,7 +4,7 @@ import axios from "axios";
 import UploadPage from "@/components/UploadPage";
 import SummaryView from "@/components/SummaryView";
 import Chatbot from "@/components/Chatbot";
-import Navbar from "@/components/Navbar";
+
 import { toast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ import {
   Download, Share2, Trash2, MoreVertical,
   BarChart3, FileBarChart
 } from "lucide-react";
+import Navbar from "@/components/Navbar";
 
 interface DocumentData {
   summary: string;
@@ -46,14 +47,7 @@ export default function Dashboard() {
   const [documentData, setDocumentData] = useState<DocumentData | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isChatLoading, setIsChatLoading] = useState(false);
-  const uploadSectionRef = useRef<HTMLDivElement>(null);
-  
-  const scrollToUpload = () => {
-    uploadSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-  
-  // Mock statistics
-  const [stats] = useState<Stats>({
+  const [stats, setStats] = useState<Stats>({
     totalDocuments: 15,
     riskBreakdown: {
       high: 3,
@@ -66,6 +60,11 @@ export default function Dashboard() {
       { name: "Terms_of_Service.pdf", date: "2025-08-23", riskLevel: "medium" },
     ]
   });
+  const uploadSectionRef = useRef<HTMLDivElement>(null);
+  
+  const scrollToUpload = () => {
+    uploadSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   const handleFileUpload = async (file: File) => {
     setIsUploading(true);

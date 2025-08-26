@@ -4,6 +4,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { Brain, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ThemeToggle } from "./ThemeToggle";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -45,6 +46,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
             </div>
             
             <div className="flex items-center space-x-4">
+              <ThemeToggle />
               <Select defaultValue="english">
                 <SelectTrigger className="w-40">
                   <Globe className="h-4 w-4 mr-2" />

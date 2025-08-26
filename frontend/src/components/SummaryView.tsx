@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AlertTriangle, CheckCircle, AlertCircle, FileText } from "lucide-react";
+import { EmptyState } from "./EmptyState";
 
 interface RiskClause {
   text: string;
@@ -12,13 +13,13 @@ interface RiskClause {
 }
 
 interface SummaryViewProps {
-  summary: string;
-  riskClauses: RiskClause[];
-  fileName: string;
+  summary?: string;
+  riskClauses?: RiskClause[];
+  fileName?: string;
   isLoading?: boolean;
 }
 
-const SummaryView = ({ summary, riskClauses, fileName, isLoading = false }: SummaryViewProps) => {
+const SummaryView = ({ summary, riskClauses = [], fileName, isLoading = false }: SummaryViewProps) => {
   const [selectedRisk, setSelectedRisk] = useState<RiskClause | null>(null);
 
   const getRiskIcon = (type: string) => {
@@ -90,6 +91,10 @@ const SummaryView = ({ summary, riskClauses, fileName, isLoading = false }: Summ
     );
   }
 
+  if (!summary && !fileName) {
+    return <EmptyState />;
+  }
+
   return (
     <div className="space-y-6">
       {/* Document Info */}
@@ -97,7 +102,7 @@ const SummaryView = ({ summary, riskClauses, fileName, isLoading = false }: Summ
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <FileText className="h-5 w-5 text-primary" />
-            <span>Document Analysis</span>
+            <span>Document Analysis - {fileName}</span>
           </CardTitle>
           <p className="text-sm text-muted-foreground">{fileName}</p>
         </CardHeader>
