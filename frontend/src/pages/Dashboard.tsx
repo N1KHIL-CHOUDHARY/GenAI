@@ -1,33 +1,24 @@
 import { useState, useRef, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import axios from "axios";
-import { ThemeToggle } from '@/components/ThemeToggle';
 import UploadPage from "@/components/UploadPage";
 import SummaryView from "@/components/SummaryView";
 import Chatbot from "@/components/Chatbot";
 import { toast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { 
   FileText, Settings, History, PieChart, 
   File, FilePlus, FileCheck, AlertTriangle,
   Download, Share2, Trash2, MoreVertical,
   BarChart3, FileBarChart
 } from "lucide-react";
+import PageContainer from "@/components/layout/PageContainer";
+import type { DocumentData } from "@/types/documents";
 
-interface DocumentData {
-  summary: string;
-  riskClauses: Array<{
-    text: string;
-    type: 'high' | 'medium' | 'low';
-    explanation: string;
-    position: number;
-  }>;
-  fileName: string;
-}
+// Uses shared DocumentData type
 
 interface Stats {
   totalDocuments: number;
@@ -164,8 +155,9 @@ export default function Dashboard() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="container min-h-screen py-8 space-y-12"
+        className="min-h-screen py-8 space-y-12"
       >
+        <PageContainer>
         {/* Hero Section */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
@@ -179,16 +171,15 @@ export default function Dashboard() {
               AI-powered legal document analysis and risk assessment
             </p>
           </div>
-         
-         <div   className="space-x-2">
+        
             
-             <Button size="lg" className="gap-2 md:self-end" onClick={scrollToUpload}>
+             <Button size="lg" className="gap-2 mr-3" onClick={scrollToUpload}>
             <FilePlus className="h-5 w-5" />
             New Analysis
           </Button>
 
-          <ThemeToggle />
-         </div>
+         
+         
          
             
         </motion.div>
@@ -360,6 +351,7 @@ export default function Dashboard() {
             )}
           </motion.div>
         </AnimatePresence>
+        </PageContainer>
       </motion.main>
     </div>
   );

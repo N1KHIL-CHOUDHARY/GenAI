@@ -1,10 +1,11 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { Brain, FileText, Shield, Zap, ArrowRight, CheckCircle, Mail, Phone, MapPin } from 'lucide-react';
+import { Brain, Shield, Zap, ArrowRight, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ThemeToggle } from '@/components/ThemeToggle';
 import heroImage from '@/assets/hero.jpeg';
+import PublicNavbar from '@/components/PublicNavbar';
+import PageContainer from '@/components/layout/PageContainer';
 const Home = () => {
   const features = [
     {
@@ -39,32 +40,12 @@ const Home = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Navigation */}
-      <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-primary/10 rounded-lg">
-                <Brain className="h-6 w-6 text-primary" />
-              </div>
-              <span className="text-xl font-bold text-foreground">AI DocAnalyzer</span>
-            </div>
-            <div className="flex items-center space-x-4">
-              <ThemeToggle />
-              <Link to="/login">
-                <Button variant="ghost">Login</Button>
-              </Link>
-              <Link to="/signup">
-                <Button>Get Started</Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <PublicNavbar />
 
       {/* Hero Section */}
       <section className="relative overflow-hidden">
-        <div className="container mx-auto px-4 py-20">
+        <PageContainer>
+          <div className="py-20">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <motion.div
               initial={{ opacity: 0, x: -20 }}
@@ -130,12 +111,13 @@ const Home = () => {
               <div className="absolute -bottom-6 -left-6 w-32 h-32 bg-accent/20 rounded-full blur-xl"></div>
             </motion.div>
           </div>
-        </div>
+          </div>
+        </PageContainer>
       </section>
 
       {/* Features Section */}
       <section className="py-20 bg-muted/30">
-        <div className="container mx-auto px-4">
+        <PageContainer>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -176,12 +158,12 @@ const Home = () => {
               </motion.div>
             ))}
           </div>
-        </div>
+        </PageContainer>
       </section>
 
       {/* CTA Section */}
       <section className="py-20">
-        <div className="container mx-auto px-4">
+        <PageContainer>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -202,18 +184,20 @@ const Home = () => {
               </Button>
             </Link>
           </motion.div>
-        </div>
+        </PageContainer>
       </section>
 
       {/* Footer */}
       <footer className="bg-muted">
-        <div className="container mx-auto px-4 py-8">
+        <PageContainer>
+          <div className="py-8">
           <div className="text-center text-muted-foreground">
             <p className="text-sm">
               © 2024 AI DocAnalyzer. Powered by advanced AI technology for intelligent document analysis.
             </p>
           </div>
-        </div>
+          </div>
+        </PageContainer>
       </footer>
     </div>
   );

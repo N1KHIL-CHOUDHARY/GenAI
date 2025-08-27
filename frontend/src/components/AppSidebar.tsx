@@ -49,7 +49,6 @@ export function AppSidebar() {
       className={collapsed ? "w-14" : "w-60"}
       collapsible="icon"
     >
-      <SidebarTrigger className="m-2 self-end" />
 
       <SidebarContent>
         {!collapsed && (

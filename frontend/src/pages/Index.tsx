@@ -1,22 +1,13 @@
 import { useState } from "react";
-import { Routes, Route } from "react-router-dom";
-import axios from "axios";
 import Navbar from "@/components/Navbar";
 import UploadPage from "@/components/UploadPage";
 import SummaryView from "@/components/SummaryView";
 import Chatbot from "@/components/Chatbot";
 import { toast } from "@/hooks/use-toast";
+import PageContainer from "@/components/layout/PageContainer";
+import type { DocumentData } from "@/types/documents";
 
-interface DocumentData {
-  summary: string;
-  riskClauses: Array<{
-    text: string;
-    type: 'high' | 'medium' | 'low';
-    explanation: string;
-    position: number;
-  }>;
-  fileName: string;
-}
+// Uses shared DocumentData type
 
 const Index = () => {
   const [documentData, setDocumentData] = useState<DocumentData | null>(null);
@@ -117,7 +108,8 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       
-      <main className="container mx-auto px-4 py-8">
+      <main className="py-8">
+        <PageContainer>
         {!documentData ? (
           <UploadPage 
             onFileUpload={handleFileUpload} 
@@ -142,16 +134,19 @@ const Index = () => {
             </div>
           </div>
         )}
+        </PageContainer>
       </main>
       
       <footer className="bg-muted mt-20">
-        <div className="container mx-auto px-4 py-8">
+        <PageContainer>
+          <div className="py-8">
           <div className="text-center text-muted-foreground">
             <p className="text-sm">
               © 2024 AI DocAnalyzer. Powered by advanced AI technology for intelligent document analysis.
             </p>
           </div>
-        </div>
+          </div>
+        </PageContainer>
       </footer>
     </div>
   );

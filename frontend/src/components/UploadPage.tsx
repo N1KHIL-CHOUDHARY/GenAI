@@ -91,7 +91,7 @@ const UploadPage = ({ onFileUpload, isUploading = false }: UploadPageProps) => {
     >
       <div
         className={cn(
-          "border-2 border-dashed rounded-lg p-12 text-center transition-colors",
+          "border-2 border-dashed rounded-lg p-6 sm:p-10 lg:p-12 text-center transition-colors",
           dragActive 
             ? "border-primary bg-primary/5" 
             : "border-muted-foreground/25 hover:border-primary/50",
@@ -113,17 +113,17 @@ const UploadPage = ({ onFileUpload, isUploading = false }: UploadPageProps) => {
               "mx-auto h-12 w-12 mb-4",
               dragActive ? "text-primary" : "text-muted-foreground"
             )} />
-            <h3 className="text-lg font-semibold mb-2">
+            <h3 className="text-base sm:text-lg font-semibold mb-2">
               {dragActive ? "Drop your file here" : "Upload Document"}
             </h3>
-            <p className="text-muted-foreground mb-6">
+            <p className="text-sm sm:text-base text-muted-foreground mb-6">
               Drag & drop your PDF or Word document, or click to browse
             </p>
             
             <div className="space-y-4">
               <Button 
                 variant="default" 
-                size="lg" 
+                size="default" 
                 disabled={isUploading}
                 onClick={() => document.getElementById("file-input")?.click()}
                 className="bg-gradient-primary hover:opacity-90"
@@ -142,7 +142,7 @@ const UploadPage = ({ onFileUpload, isUploading = false }: UploadPageProps) => {
               />
             </div>
             
-            <p className="text-xs text-muted-foreground mt-4">
+            <p className="text-[11px] sm:text-xs text-muted-foreground mt-4">
               Supported formats: PDF, DOC, DOCX (Max 10MB)
             </p>
           </>
