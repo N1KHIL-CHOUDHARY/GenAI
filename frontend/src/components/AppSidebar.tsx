@@ -1,6 +1,7 @@
+
 import { useState } from "react";
 import { Upload, FileText, MessageSquare, Settings, LogOut, Home } from "lucide-react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Sidebar,
@@ -28,12 +29,10 @@ const navigationItems = [
 export function AppSidebar() {
   const { state } = useSidebar();
   const location = useLocation();
+  const navigate = useNavigate();
   const { logout, user } = useAuth();
   const currentPath = location.pathname;
   const collapsed = state === "collapsed";
-
-  const isActive = (path: string) => currentPath === path;
-  const isExpanded = navigationItems.some((i) => isActive(i.url));
 
   const getNavCls = ({ isActive }: { isActive: boolean }) =>
     isActive 
@@ -42,6 +41,7 @@ export function AppSidebar() {
 
   const handleLogout = () => {
     logout();
+    navigate('/');
   };
 
   return (
@@ -52,7 +52,6 @@ export function AppSidebar() {
       <SidebarTrigger className="m-2 self-end" />
 
       <SidebarContent>
-        {/* User Profile Section */}
         {!collapsed && (
           <motion.div
             initial={{ opacity: 0 }}
@@ -107,7 +106,6 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Logout Button */}
         <div className="mt-auto p-4">
           <Button
             variant="ghost"
