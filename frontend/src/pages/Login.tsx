@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
+import { GoogleLogin } from '@react-oauth/google';
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -52,6 +53,18 @@ const Login = () => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const { googleLogin } = useAuth();
+  const onGoogleSuccess = async (credentialResponse: any) => {
+    if (!credentialResponse?.credential) return;
+    try {
+      await googleLogin(credentialResponse.credential);
+      toast({ title: 'Welcome!', description: 'Logged in with Google.' });
+      navigate(from, { replace: true });
+    } catch (e) {
+      toast({ title: 'Google login failed', description: 'Please try again.', variant: 'destructive' });
     }
   };
 
@@ -155,6 +168,19 @@ const Login = () => {
             </Form>
 
             <div className="mt-6 text-center">
+              <div className="mb-4">
+                <div className="w-full">
+                  <GoogleLogin 
+                    onSuccess={onGoogleSuccess} 
+                    onError={() => {}} 
+                    theme="outline"
+                    size="large"
+                    text="signin_with"
+                    shape="rectangular"
+                    width="100%"
+                  />
+                </div>
+              </div>
               <p className="text-sm text-muted-foreground">
                 Don't have an account?{' '}
                 <Link to="/signup" className="text-primary hover:underline font-medium">

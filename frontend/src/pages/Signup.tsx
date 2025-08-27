@@ -26,7 +26,10 @@ type SignupForm = z.infer<typeof signupSchema>;
 
 const Signup = () => {
   const [isLoading, setIsLoading] = useState(false);
-  const { signup } = useAuth();
+  const { signup, verifyOtp } = useAuth();
+  const [step, setStep] = useState<1 | 2>(1);
+  const [signupToken, setSignupToken] = useState<string>("");
+  const [emailForOtp, setEmailForOtp] = useState<string>("");
   const navigate = useNavigate();
 
   const form = useForm<SignupForm>({
@@ -42,18 +45,37 @@ const Signup = () => {
   const onSubmit = async (data: SignupForm) => {
     setIsLoading(true);
     try {
-      await signup(data.email, data.password, data.name);
+      const res = await signup(data.email, data.password, data.name);
+      if (res?.signupToken) setSignupToken(res.signupToken);
+      setEmailForOtp(data.email);
+      if (res?.devOtp) console.log('DEV OTP:', res.devOtp);
+      setStep(2);
       toast({
-        title: "Welcome to AI DocAnalyzer!",
-        description: "Your account has been created successfully.",
+        title: "OTP sent",
+        description: "Please check your email for the verification code.",
       });
-      navigate('/dashboard');
     } catch (error) {
       toast({
         title: "Signup failed",
         description: "There was an error creating your account. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const [otp, setOtp] = useState<string>("");
+  const [welcome, setWelcome] = useState<boolean>(false);
+  const onVerifyOtp = async () => {
+    setIsLoading(true);
+    try {
+      await verifyOtp(signupToken, String(otp), emailForOtp);
+      toast({ title: "Verified", description: "Your account is now active." });
+      setWelcome(true);
+      setTimeout(() => navigate('/dashboard'), 2500);
+    } catch (e) {
+      toast({ title: "Invalid OTP", description: "Please try again.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -93,6 +115,15 @@ const Signup = () => {
           </CardHeader>
           
           <CardContent>
+            {welcome ? (
+              <div className="py-6 text-center space-y-3">
+                <div className="mx-auto p-3 bg-primary/10 rounded-full w-fit">
+                  <Brain className="h-8 w-8 text-primary" />
+                </div>
+                <h3 className="text-xl font-semibold">Welcome to AI DocAnalyzer!</h3>
+                <p className="text-muted-foreground">Setting things up... Redirecting to your dashboard.</p>
+              </div>
+            ) : step === 1 ? (
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormField
@@ -202,6 +233,24 @@ const Signup = () => {
                 </Button>
               </form>
             </Form>
+            ) : (
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium">Enter OTP</label>
+                  <input
+                    aria-label="OTP"
+                    inputMode="numeric"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value)}
+                    className="mt-2 w-full rounded-md border px-3 py-2 bg-background"
+                    placeholder="6-digit code"
+                  />
+                </div>
+                <Button onClick={onVerifyOtp} className="w-full" disabled={isLoading}>
+                  {isLoading ? 'Verifying...' : 'Verify' }
+                </Button>
+              </div>
+            )}
 
             <div className="mt-6 text-center">
               <p className="text-sm text-muted-foreground">

@@ -16,6 +16,7 @@ import NotFound from "./pages/NotFound";
 import UploadPage from "./components/UploadPage";
 import SummaryView from "./components/SummaryView";
 import Chatbot from "./components/Chatbot";
+import { GoogleOAuthProvider } from "@react-oauth/google";
 
 const queryClient = new QueryClient();
 
@@ -26,9 +27,10 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner />
-          <BrowserRouter>
-            <ErrorBoundary>
-            <Routes>
+          <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID as string}>
+            <BrowserRouter>
+              <ErrorBoundary>
+              <Routes>
               {/* Public Routes */}
               <Route path="/" element={<Home />} />
               <Route path="/login" element={<Login />} />
@@ -73,9 +75,10 @@ const App = () => (
 
               {/* 404 Route */}
               <Route path="*" element={<NotFound />} />
-            </Routes>
-            </ErrorBoundary>
-          </BrowserRouter>
+              </Routes>
+              </ErrorBoundary>
+            </BrowserRouter>
+          </GoogleOAuthProvider>
         </TooltipProvider>
       </AuthProvider>
     </ThemeProvider>

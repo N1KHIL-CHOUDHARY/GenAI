@@ -17,6 +17,8 @@ require('dotenv').config();
 const { connectDB } = require('./config/db');
 
 
+
+
 // Initialize express app
 const app = express();
 
@@ -24,9 +26,14 @@ const app = express();
 connectDB();
 
 app.use(helmet());
+const allowedOrigins = (process.env.FRONTEND_URLS || 'http://localhost:8080,http://localhost:5173').split(',');
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-  credentials: true
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
 }));
 
 // Rate limiting
@@ -62,7 +69,7 @@ app.listen(PORT, () => {
 process.on('unhandledRejection', (err) => {
   logger.error('Unhandled Rejection:', err);
   // Close server & exit process
-  process.exit(1);adwa
+  process.exit(1);
 });
 
 module.exports = app;

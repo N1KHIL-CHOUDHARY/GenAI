@@ -38,10 +38,21 @@ const userSchema = new mongoose.Schema(
     },
     passwordResetToken: String,
     passwordResetExpires: Date,
+    googleId: {
+      type: String,
+      index: true,
+      sparse: true,
+    },
+  isVerified: {
+    type: Boolean,
+    default: false,
   },
-  {
+  otp: String,
+  otpExpires: Date,
+  },
+      {
     timestamps: true,
-  }
+  },
 );
 
 // Encrypt password before saving
