@@ -10,20 +10,15 @@ const rateLimit = require('express-rate-limit');
 const authRoutes = require('./routes/authRoutes');
 const documentRoutes = require('./routes/documentRoutes');
 
-
-
 require('dotenv').config();
 
-const { connectDB } = require('./config/db');
-
-
-
+const { initializeFirebase } = require('./config/db');
 
 // Initialize express app
 const app = express();
 
-// Connect to MongoDB
-connectDB();
+// Initialize Firebase
+initializeFirebase();
 
 app.use(helmet());
 const allowedOrigins = (process.env.FRONTEND_URLS || 'http://localhost:8080,http://localhost:5173').split(',');
@@ -38,8 +33,8 @@ app.use(cors({
 
 // Rate limiting
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
+  windowMs: 15 * 60 * 1000,
+  max: 100
 });
 app.use(limiter);
 
@@ -56,7 +51,6 @@ if (process.env.NODE_ENV === 'development') {
 app.use('/api/auth', authRoutes);
 app.use('/api/documents', documentRoutes);
 
-
 app.use(errorHandler);
 
 // Start server
@@ -68,7 +62,6 @@ app.listen(PORT, () => {
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (err) => {
   logger.error('Unhandled Rejection:', err);
-  // Close server & exit process
   process.exit(1);
 });
 

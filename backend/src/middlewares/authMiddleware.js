@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 const { AppError } = require('./errorHandler');
-const User = require('../models/userModel');
+const { findUserById } = require('../services/userService');
 const asyncHandler = require('express-async-handler');
 
 const protect = asyncHandler(async (req, res, next) => {
@@ -11,18 +11,17 @@ const protect = asyncHandler(async (req, res, next) => {
     req.headers.authorization.startsWith('Bearer')
   ) {
     try {
-      // Get token from header
       token = req.headers.authorization.split(' ')[1];
 
-      // Verify token
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-      // Get user from the token
-      req.user = await User.findById(decoded.id).select('-password');
-
-      if (!req.user) {
+      const user = await findUserById(decoded.id);
+      if (!user) {
         throw new AppError('User not found', 401);
       }
+
+      const { password, ...userWithoutPassword } = user;
+      req.user = userWithoutPassword;
 
       next();
     } catch (error) {
@@ -35,7 +34,6 @@ const protect = asyncHandler(async (req, res, next) => {
   }
 });
 
-// Rate limiting middleware for specific routes
 const rateLimiter = (limit, windowMs) => {
   const requests = new Map();
 
@@ -44,14 +42,12 @@ const rateLimiter = (limit, windowMs) => {
     const now = Date.now();
     const windowStart = now - windowMs;
 
-    // Clean up old requests
     requests.forEach((timestamp, key) => {
       if (timestamp < windowStart) {
         requests.delete(key);
       }
     });
 
-    // Count requests for this IP
     const requestTimes = Array.from(requests.entries())
       .filter(([key, timestamp]) => key === ip && timestamp > windowStart);
 

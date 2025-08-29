@@ -1,12 +1,15 @@
 const asyncHandler = require('express-async-handler');
-const Document = require('../models/documentModel');
 const { AppError } = require('../middlewares/errorHandler');
 const { analyzeDocument } = require('../services/analysisService');
 const logger = require('../utils/logger');
+const {
+  createDocument,
+  findDocumentsByUser,
+  findDocumentById,
+  updateDocument,
+  deleteDocument
+} = require('../services/documentService');
 
-// @desc    Upload and analyze a new document
-// @route   POST /api/documents
-// @access  Private
 const uploadDocument = asyncHandler(async (req, res) => {
   if (!req.file) {
     throw new AppError('Please upload a file', 400);
@@ -14,7 +17,7 @@ const uploadDocument = asyncHandler(async (req, res) => {
 
   const { filename, mimetype, size, path } = req.file;
 
-  const document = await Document.create({
+  const document = await createDocument({
     user: req.user._id,
     fileName: filename,
     fileType: mimetype,
@@ -22,7 +25,6 @@ const uploadDocument = asyncHandler(async (req, res) => {
     filePath: path,
   });
 
-  // Start analysis in background
   analyzeDocument(document._id).catch(err => {
     logger.error('Error analyzing document:', err);
   });
@@ -33,52 +35,35 @@ const uploadDocument = asyncHandler(async (req, res) => {
   });
 });
 
-// @desc    Get all user's documents
-// @route   GET /api/documents
-// @access  Private
 const getDocuments = asyncHandler(async (req, res) => {
   const page = parseInt(req.query.page, 10) || 1;
   const limit = parseInt(req.query.limit, 10) || 10;
-  const startIndex = (page - 1) * limit;
 
-  const query = { user: req.user._id };
-
-  const total = await Document.countDocuments(query);
-  const documents = await Document.find(query)
-    .sort({ createdAt: -1 })
-    .skip(startIndex)
-    .limit(limit)
-    .populate('user', 'name email');
+  const result = await findDocumentsByUser(req.user._id, page, limit);
 
   res.json({
     success: true,
-    count: documents.length,
-    total,
+    count: result.documents.length,
+    total: result.total,
     pagination: {
-      page,
-      pages: Math.ceil(total / limit),
+      page: result.page,
+      pages: result.pages,
     },
-    data: documents,
+    data: result.documents,
   });
 });
 
-// @desc    Get single document
-// @route   GET /api/documents/:id
-// @access  Private
 const getDocument = asyncHandler(async (req, res) => {
-  const document = await Document.findById(req.params.id)
-    .populate('user', 'name email')
-    .populate('sharedWith.user', 'name email');
+  const document = await findDocumentById(req.params.id);
 
   if (!document) {
     throw new AppError('Document not found', 404);
   }
 
-  // Check ownership or sharing permissions
   if (
-    document.user._id.toString() !== req.user._id.toString() &&
+    document.user !== req.user._id &&
     !document.sharedWith.some(share => 
-      share.user._id.toString() === req.user._id.toString()
+      share.user === req.user._id
     )
   ) {
     throw new AppError('Not authorized to access this document', 403);
@@ -90,25 +75,21 @@ const getDocument = asyncHandler(async (req, res) => {
   });
 });
 
-// @desc    Update document sharing settings
-// @route   PUT /api/documents/:id/share
-// @access  Private
 const shareDocument = asyncHandler(async (req, res) => {
   const { userId, permissions } = req.body;
 
-  const document = await Document.findById(req.params.id);
+  const document = await findDocumentById(req.params.id);
 
   if (!document) {
     throw new AppError('Document not found', 404);
   }
 
-  if (document.user.toString() !== req.user._id.toString()) {
+  if (document.user !== req.user._id) {
     throw new AppError('Not authorized to share this document', 403);
   }
 
-  // Update sharing settings
   const shareIndex = document.sharedWith.findIndex(
-    share => share.user.toString() === userId
+    share => share.user === userId
   );
 
   if (shareIndex >= 0) {
@@ -117,29 +98,28 @@ const shareDocument = asyncHandler(async (req, res) => {
     document.sharedWith.push({ user: userId, permissions });
   }
 
-  await document.save();
+  const updatedDocument = await updateDocument(req.params.id, {
+    sharedWith: document.sharedWith
+  });
 
   res.json({
     success: true,
-    data: document,
+    data: updatedDocument,
   });
 });
 
-// @desc    Delete document
-// @route   DELETE /api/documents/:id
-// @access  Private
-const deleteDocument = asyncHandler(async (req, res) => {
-  const document = await Document.findById(req.params.id);
+const deleteDocumentHandler = asyncHandler(async (req, res) => {
+  const document = await findDocumentById(req.params.id);
 
   if (!document) {
     throw new AppError('Document not found', 404);
   }
 
-  if (document.user.toString() !== req.user._id.toString()) {
+  if (document.user !== req.user._id) {
     throw new AppError('Not authorized to delete this document', 403);
   }
 
-  await document.remove();
+  await deleteDocument(req.params.id);
 
   res.json({
     success: true,
@@ -152,5 +132,5 @@ module.exports = {
   getDocuments,
   getDocument,
   shareDocument,
-  deleteDocument,
+  deleteDocument: deleteDocumentHandler,
 };

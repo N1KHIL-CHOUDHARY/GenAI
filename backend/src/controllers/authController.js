@@ -1,11 +1,19 @@
 const asyncHandler = require('express-async-handler');
 const jwt = require('jsonwebtoken');
-const User = require('../models/userModel');
 const { AppError } = require('../middlewares/errorHandler');
 const nodemailer = require('nodemailer');
 const otpGenerator = require('otp-generator');
 const { OAuth2Client } = require('google-auth-library');
 const crypto = require('crypto');
+const {
+  createUser,
+  findUserByEmail,
+  findUserById,
+  updateUser,
+  matchPassword,
+  createPasswordResetToken
+} = require('../services/userService');
+const { getFirestore } = require('../config/db');
 
 // Generate JWT Token
 const generateToken = (id) => {
@@ -51,22 +59,29 @@ const buildTransporter = async () => {
 const registerUser = asyncHandler(async (req, res) => {
   const { name, email, password } = req.body;
 
-  const existing = await User.findOne({ email }).select('+password');
+  const existing = await findUserByEmail(email);
   if (existing && existing.isVerified) throw new AppError('User already exists', 400);
 
   const otp = otpGenerator.generate(6, { upperCaseAlphabets: false, specialChars: false });
   const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
+  
+  console.log('🔐 Registration Debug:');
+  console.log('Generated OTP:', otp);
+  console.log('OTP Expires:', otpExpires);
+  console.log('Existing user:', existing ? 'Yes' : 'No');
 
   let user;
   if (existing) {
-    // Update unverified user
-    existing.name = name;
-    existing.password = password; // will be hashed by pre-save
-    existing.otp = String(otp);
-    existing.otpExpires = otpExpires;
-    user = await existing.save();
+    console.log('Updating existing user with OTP:', otp);
+    user = await updateUser(existing._id, {
+      name,
+      password,
+      otp: String(otp),
+      otpExpires,
+    });
   } else {
-    user = await User.create({
+    console.log('Creating new user with OTP:', otp);
+    user = await createUser({
       name,
       email,
       password,
@@ -75,6 +90,9 @@ const registerUser = asyncHandler(async (req, res) => {
       otpExpires,
     });
   }
+  
+  console.log('User saved with OTP:', user.otp);
+  console.log('User saved with OTP Expires:', user.otpExpires);
 
   const transporter = await buildTransporter();
   
@@ -130,8 +148,19 @@ const registerUser = asyncHandler(async (req, res) => {
 // @access Public
 const verifyOtp = asyncHandler(async (req, res) => {
   const { email, otp } = req.body;
-  const user = await User.findOne({ email }).select('+password');
+  
+  console.log('🔍 OTP Verification Debug:');
+  console.log('Email received:', email);
+  console.log('OTP received:', otp);
+  
+  const user = await findUserByEmail(email);
   if (!user) throw new AppError('User not found', 404);
+  
+  console.log('User found:', user._id);
+  console.log('User OTP field:', user.otp);
+  console.log('User OTP type:', typeof user.otp);
+  console.log('User OTP expires:', user.otpExpires);
+  
   if (user.isVerified) {
     return res.json({ success: true, data: { _id: user._id, name: user.name, email: user.email, token: generateToken(user._id) } });
   }
@@ -139,15 +168,20 @@ const verifyOtp = asyncHandler(async (req, res) => {
   const storedOtp = String(user.otp || '');
   const receivedOtp = String(otp || '');
   const expired = !user.otpExpires || user.otpExpires.getTime() < Date.now();
+  
   console.log('[OTP DEBUG] stored:', storedOtp, 'received:', receivedOtp, 'expired:', expired, 'expiresAt:', user.otpExpires);
+  console.log('Stored OTP length:', storedOtp.length);
+  console.log('Received OTP length:', receivedOtp.length);
+  console.log('OTP match:', storedOtp === receivedOtp);
 
   if (expired) throw new AppError('OTP expired', 400);
   if (storedOtp !== receivedOtp) throw new AppError('Invalid OTP', 400);
 
-  user.isVerified = true;
-  user.otp = undefined;
-  user.otpExpires = undefined;
-  await user.save();
+  await updateUser(user._id, {
+    isVerified: true,
+    otp: undefined,
+    otpExpires: undefined,
+  });
 
   res.json({
     success: true,
@@ -165,14 +199,13 @@ const verifyOtp = asyncHandler(async (req, res) => {
 // @access Public
 const loginUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
-  const user = await User.findOne({ email }).select('+password');
+  const user = await findUserByEmail(email);
 
-  if (!user || !(await user.matchPassword(password))) {
+  if (!user || !(await matchPassword(user.password, password))) {
     throw new AppError('Invalid credentials', 401);
   }
 
-  user.lastLogin = Date.now();
-  await user.save();
+  await updateUser(user._id, { lastLogin: new Date() });
 
   res.json({
     success: true,
@@ -190,38 +223,59 @@ const loginUser = asyncHandler(async (req, res) => {
 // @access Public
 const googleLogin = asyncHandler(async (req, res) => {
   const { idToken } = req.body;
+  
+  console.log('🔍 Google Login Debug:');
+  console.log('Expected Client ID:', process.env.GOOGLE_CLIENT_ID);
+  console.log('Received idToken length:', idToken ? idToken.length : 'undefined');
+  
   const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-  const ticket = await client.verifyIdToken({ idToken, audience: process.env.GOOGLE_CLIENT_ID });
-  const payload = ticket.getPayload();
-
-  if (!payload || !payload.email) throw new AppError('Google authentication failed', 400);
-
-  const { email, name, sub: googleId } = payload;
-  let user = await User.findOne({ email });
-
-  if (!user) {
-    user = await User.create({
-      name: name || email.split('@')[0],
-      email,
-      password: crypto.randomBytes(16).toString('hex'),
-      googleId,
-      isVerified: true,
+  
+  try {
+    const ticket = await client.verifyIdToken({ 
+      idToken, 
+      audience: process.env.GOOGLE_CLIENT_ID 
     });
-  } else if (!user.googleId) {
-    user.googleId = googleId;
-    user.isVerified = true;
-    await user.save();
-  }
+    const payload = ticket.getPayload();
+    
+    console.log('✅ Token verified successfully');
+    console.log('Token audience:', payload.aud);
+    console.log('Token issuer:', payload.iss);
+    console.log('User email:', payload.email);
 
-  res.json({
-    success: true,
-    data: {
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      token: generateToken(user._id),
-    },
-  });
+    if (!payload || !payload.email) throw new AppError('Google authentication failed', 400);
+
+    const { email, name, sub: googleId } = payload;
+    let user = await findUserByEmail(email);
+
+    if (!user) {
+      user = await createUser({
+        name: name || email.split('@')[0],
+        email,
+        password: crypto.randomBytes(16).toString('hex'),
+        googleId,
+        isVerified: true,
+      });
+    } else if (!user.googleId) {
+      user = await updateUser(user._id, {
+        googleId,
+        isVerified: true,
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        token: generateToken(user._id),
+      },
+    });
+  } catch (error) {
+    console.error('❌ Google OAuth Error:', error.message);
+    console.error('Full error:', error);
+    throw new AppError(`Google authentication failed: ${error.message}`, 400);
+  }
 });
 
 // @desc Google OAuth callback
@@ -229,45 +283,69 @@ const googleLogin = asyncHandler(async (req, res) => {
 // @access Public
 const googleCallback = asyncHandler(async (req, res) => {
   const { code } = req.query;
+  
+  console.log('🔍 Google Callback Debug:');
+  console.log('Received authorization code:', code ? 'Yes' : 'No');
+  console.log('Client ID:', process.env.GOOGLE_CLIENT_ID);
+  console.log('Client Secret length:', process.env.GOOGLE_CLIENT_SECRET ? process.env.GOOGLE_CLIENT_SECRET.length : 'undefined');
+  
   const client = new OAuth2Client(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
     'http://localhost:5000/api/auth/google/callback'
   );
 
-  const { tokens } = await client.getToken({ code, redirect_uri: 'http://localhost:5000/api/auth/google/callback' });
-  const ticket = await client.verifyIdToken({ idToken: tokens.id_token, audience: process.env.GOOGLE_CLIENT_ID });
-  const payload = ticket.getPayload();
-
-  if (!payload || !payload.email) throw new AppError('Google authentication failed', 400);
-
-  const { email, name, sub: googleId } = payload;
-  let user = await User.findOne({ email });
-
-  if (!user) {
-    user = await User.create({
-      name: name || email.split('@')[0],
-      email,
-      password: crypto.randomBytes(16).toString('hex'),
-      googleId,
-      isVerified: true,
+  try {
+    const { tokens } = await client.getToken({ 
+      code, 
+      redirect_uri: 'http://localhost:5000/api/auth/google/callback' 
     });
-  } else if (!user.googleId) {
-    user.googleId = googleId;
-    user.isVerified = true;
-    await user.save();
-  }
+    
+    console.log('✅ Tokens received successfully');
+    console.log('Access token length:', tokens.access_token ? tokens.access_token.length : 'undefined');
+    console.log('ID token length:', tokens.id_token ? tokens.id_token.length : 'undefined');
+    
+    const ticket = await client.verifyIdToken({ 
+      idToken: tokens.id_token, 
+      audience: process.env.GOOGLE_CLIENT_ID 
+    });
+    const payload = ticket.getPayload();
 
-  const token = generateToken(user._id);
-  const redirectUrl = (process.env.FRONTEND_GOOGLE_REDIRECT || 'http://localhost:3000/login') + `#token=${token}`;
-  res.redirect(302, redirectUrl);
+    if (!payload || !payload.email) throw new AppError('Google authentication failed', 400);
+
+    const { email, name, sub: googleId } = payload;
+    let user = await findUserByEmail(email);
+
+    if (!user) {
+      user = await createUser({
+        name: name || email.split('@')[0],
+        email,
+        password: crypto.randomBytes(16).toString('hex'),
+        googleId,
+        isVerified: true,
+      });
+    } else if (!user.googleId) {
+      user = await updateUser(user._id, {
+        googleId,
+        isVerified: true,
+      });
+    }
+
+    const token = generateToken(user._id);
+    const redirectUrl = (process.env.FRONTEND_GOOGLE_REDIRECT || 'http://localhost:8080/dashboard') + `#token=${token}`;
+    res.redirect(302, redirectUrl);
+  } catch (error) {
+    console.error('❌ Google Callback Error:', error.message);
+    console.error('Full error:', error);
+    throw new AppError(`Google authentication failed: ${error.message}`, 400);
+  }
 });
 
 // @desc Get current user
 // @route GET /api/auth/me
 // @access Private
 const getMe = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.user._id);
+  const user = await findUserById(req.user._id);
   res.json({ success: true, data: user });
 });
 
@@ -275,14 +353,15 @@ const getMe = asyncHandler(async (req, res) => {
 // @route PUT /api/auth/me
 // @access Private
 const updateProfile = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.user._id);
+  const user = await findUserById(req.user._id);
   if (!user) throw new AppError('User not found', 404);
 
-  user.name = req.body.name || user.name;
-  user.email = req.body.email || user.email;
-  if (req.body.password) user.password = req.body.password;
+  const updateData = {};
+  if (req.body.name) updateData.name = req.body.name;
+  if (req.body.email) updateData.email = req.body.email;
+  if (req.body.password) updateData.password = req.body.password;
 
-  const updatedUser = await user.save();
+  const updatedUser = await updateUser(user._id, updateData);
   res.json({
     success: true,
     data: {
@@ -298,11 +377,14 @@ const updateProfile = asyncHandler(async (req, res) => {
 // @route POST /api/auth/forgot-password
 // @access Public
 const forgotPassword = asyncHandler(async (req, res) => {
-  const user = await User.findOne({ email: req.body.email });
+  const user = await findUserByEmail(req.body.email);
   if (!user) throw new AppError('No user found with that email', 404);
 
-  const resetToken = user.createPasswordResetToken();
-  await user.save();
+  const { resetToken, hashedToken, expiresAt } = createPasswordResetToken();
+  await updateUser(user._id, {
+    passwordResetToken: hashedToken,
+    passwordResetExpires: expiresAt,
+  });
 
   res.json({
     success: true,
@@ -318,22 +400,30 @@ const resetPassword = asyncHandler(async (req, res) => {
   const { password } = req.body;
   const { token } = req.params;
 
-  const user = await User.findOne({
-    passwordResetToken: crypto.createHash('sha256').update(token).digest('hex'),
-    passwordResetExpires: { $gt: Date.now() },
+  const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+  
+  const db = getFirestore();
+  const snapshot = await db.collection('users')
+    .where('passwordResetToken', '==', hashedToken)
+    .where('passwordResetExpires', '>', new Date())
+    .limit(1)
+    .get();
+
+  if (snapshot.empty) {
+    throw new AppError('Invalid or expired reset token', 400);
+  }
+
+  const userDoc = snapshot.docs[0];
+  await updateUser(userDoc.id, {
+    password,
+    passwordResetToken: undefined,
+    passwordResetExpires: undefined,
   });
-
-  if (!user) throw new AppError('Invalid or expired reset token', 400);
-
-  user.password = password;
-  user.passwordResetToken = undefined;
-  user.passwordResetExpires = undefined;
-  await user.save();
 
   res.json({
     success: true,
     message: 'Password reset successful',
-    token: generateToken(user._id),
+    token: generateToken(userDoc.id),
   });
 });
 
