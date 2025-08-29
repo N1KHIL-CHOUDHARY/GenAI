@@ -72,9 +72,21 @@ const updateDocument = async (id, updateData) => {
   const db = getFirestore();
   const documentsCollection = db.collection('documents');
   
-  updateData.updatedAt = new Date();
+  const { FieldValue } = require('firebase-admin/firestore');
   
-  await documentsCollection.doc(id).update(updateData);
+  const processedUpdateData = {};
+  
+  for (const [key, value] of Object.entries(updateData)) {
+    if (value === undefined) {
+      processedUpdateData[key] = FieldValue.delete();
+    } else {
+      processedUpdateData[key] = value;
+    }
+  }
+  
+  processedUpdateData.updatedAt = new Date();
+  
+  await documentsCollection.doc(id).update(processedUpdateData);
   
   return findDocumentById(id);
 };

@@ -71,9 +71,21 @@ const updateUser = async (id, updateData) => {
   const db = getFirestore();
   const usersCollection = db.collection('users');
   
-  updateData.updatedAt = new Date();
+  const { FieldValue } = require('firebase-admin/firestore');
   
-  await usersCollection.doc(id).update(updateData);
+  const processedUpdateData = {};
+  
+  for (const [key, value] of Object.entries(updateData)) {
+    if (value === undefined) {
+      processedUpdateData[key] = FieldValue.delete();
+    } else {
+      processedUpdateData[key] = value;
+    }
+  }
+  
+  processedUpdateData.updatedAt = new Date();
+  
+  await usersCollection.doc(id).update(processedUpdateData);
   
   return findUserById(id);
 };
@@ -104,5 +116,5 @@ module.exports = {
   updateUser,
   updateUserById,
   matchPassword,
-  createPasswordResetToken
+  createPasswordResetToken,
 };

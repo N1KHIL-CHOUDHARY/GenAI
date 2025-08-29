@@ -65,34 +65,36 @@ const registerUser = asyncHandler(async (req, res) => {
   const otp = otpGenerator.generate(6, { upperCaseAlphabets: false, specialChars: false });
   const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
   
+  const hashedOtp = crypto.createHash('sha256').update(otp).digest('hex');
+  
   console.log('🔐 Registration Debug:');
   console.log('Generated OTP:', otp);
+  console.log('Hashed OTP:', hashedOtp);
   console.log('OTP Expires:', otpExpires);
   console.log('Existing user:', existing ? 'Yes' : 'No');
 
   let user;
   if (existing) {
-    console.log('Updating existing user with OTP:', otp);
+    console.log('Updating existing user with hashed OTP');
     user = await updateUser(existing._id, {
       name,
       password,
-      otp: String(otp),
+      otp: hashedOtp,
       otpExpires,
     });
   } else {
-    console.log('Creating new user with OTP:', otp);
+    console.log('Creating new user with hashed OTP');
     user = await createUser({
       name,
       email,
       password,
       isVerified: false,
-      otp: String(otp),
+      otp: hashedOtp,
       otpExpires,
     });
   }
   
-  console.log('User saved with OTP:', user.otp);
-  console.log('User saved with OTP Expires:', user.otpExpires);
+  console.log('User saved with hashed OTP');
 
   const transporter = await buildTransporter();
   
@@ -138,8 +140,7 @@ const registerUser = asyncHandler(async (req, res) => {
 
   res.status(201).json({
     success: true,
-    message: 'OTP sent to email. Please verify.',
-    ...(process.env.NODE_ENV === 'development' ? { devOtp: otp } : {}),
+    message: 'OTP sent to email. Please check your inbox and verify.',
   });
 });
 
@@ -165,17 +166,21 @@ const verifyOtp = asyncHandler(async (req, res) => {
     return res.json({ success: true, data: { _id: user._id, name: user.name, email: user.email, token: generateToken(user._id) } });
   }
 
-  const storedOtp = String(user.otp || '');
-  const receivedOtp = String(otp || '');
-  const expired = !user.otpExpires || user.otpExpires.getTime() < Date.now();
-  
-  console.log('[OTP DEBUG] stored:', storedOtp, 'received:', receivedOtp, 'expired:', expired, 'expiresAt:', user.otpExpires);
-  console.log('Stored OTP length:', storedOtp.length);
-  console.log('Received OTP length:', receivedOtp.length);
-  console.log('OTP match:', storedOtp === receivedOtp);
+  if (!user.otp || !user.otpExpires) {
+    throw new AppError('No OTP found. Please request a new one.', 400);
+  }
 
-  if (expired) throw new AppError('OTP expired', 400);
-  if (storedOtp !== receivedOtp) throw new AppError('Invalid OTP', 400);
+  const hashedReceivedOtp = crypto.createHash('sha256').update(String(otp)).digest('hex');
+  const storedOtp = user.otp;
+  const expired = user.otpExpires.getTime() < Date.now();
+  
+  console.log('[OTP DEBUG] stored hash:', storedOtp);
+  console.log('[OTP DEBUG] received hash:', hashedReceivedOtp);
+  console.log('[OTP DEBUG] expired:', expired, 'expiresAt:', user.otpExpires);
+  console.log('OTP match:', storedOtp === hashedReceivedOtp);
+
+  if (expired) throw new AppError('OTP has expired. Please request a new one.', 400);
+  if (storedOtp !== hashedReceivedOtp) throw new AppError('Invalid OTP. Please check your email and try again.', 400);
 
   await updateUser(user._id, {
     isVerified: true,

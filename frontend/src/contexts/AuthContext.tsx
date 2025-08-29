@@ -10,8 +10,8 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string, name: string) => Promise<{ signupToken: string; devOtp?: string }>;
-  verifyOtp: (signupToken: string, otp: string) => Promise<void>;
+  signup: (email: string, password: string, name: string) => Promise<void>;
+  verifyOtp: (email: string, otp: string) => Promise<void>;
   googleLogin: (idToken: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
@@ -32,7 +32,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is logged in (from localStorage)
     const savedUser = localStorage.getItem('user');
     if (savedUser) {
       setUser(JSON.parse(savedUser));
@@ -71,7 +70,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       if (!res.ok) throw new Error('Signup failed');
       const data = await res.json();
-      return { signupToken: data.signupToken, devOtp: data.devOtp };
+      if (!data.success) throw new Error(data.message || 'Signup failed');
     } catch (error) {
       throw new Error('Signup failed');
     } finally {
@@ -79,20 +78,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const verifyOtp = async (signupToken: string, otp: string, emailOverride?: string) => {
+  const verifyOtp = async (email: string, otp: string) => {
     setIsLoading(true);
     try {
       const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/auth/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ signupToken, otp: String(otp), email: emailOverride }),
+        body: JSON.stringify({ email, otp: String(otp) }),
       });
-      if (!res.ok) throw new Error('OTP verification failed');
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || 'OTP verification failed');
+      }
       const data = await res.json();
       const payload = { id: data.data._id, email: data.data.email, name: data.data.name };
       setUser(payload);
       localStorage.setItem('user', JSON.stringify(payload));
       localStorage.setItem('token', data.data.token);
+    } catch (error) {
+      throw error;
     } finally {
       setIsLoading(false);
     }

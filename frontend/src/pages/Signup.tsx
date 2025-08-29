@@ -28,7 +28,6 @@ const Signup = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { signup, verifyOtp } = useAuth();
   const [step, setStep] = useState<1 | 2>(1);
-  const [signupToken, setSignupToken] = useState<string>("");
   const [emailForOtp, setEmailForOtp] = useState<string>("");
   const navigate = useNavigate();
 
@@ -45,10 +44,8 @@ const Signup = () => {
   const onSubmit = async (data: SignupForm) => {
     setIsLoading(true);
     try {
-      const res = await signup(data.email, data.password, data.name);
-      if (res?.signupToken) setSignupToken(res.signupToken);
+      await signup(data.email, data.password, data.name);
       setEmailForOtp(data.email);
-      if (res?.devOtp) console.log('DEV OTP:', res.devOtp);
       setStep(2);
       toast({
         title: "OTP sent",
@@ -70,7 +67,7 @@ const Signup = () => {
   const onVerifyOtp = async () => {
     setIsLoading(true);
     try {
-      await verifyOtp(signupToken, String(otp), emailForOtp);
+      await verifyOtp(emailForOtp, String(otp));
       toast({ title: "Verified", description: "Your account is now active." });
       setWelcome(true);
       setTimeout(() => navigate('/dashboard'), 2500);
@@ -89,7 +86,6 @@ const Signup = () => {
         transition={{ duration: 0.5 }}
         className="w-full max-w-md"
       >
-        {/* Back to Home and Theme Toggle */}
         <div className="flex items-center justify-between mb-6">
           <Link 
             to="/" 
@@ -98,7 +94,6 @@ const Signup = () => {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Home
           </Link>
-         
         </div>
 
         <Card>
