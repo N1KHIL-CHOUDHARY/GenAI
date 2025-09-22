@@ -96,7 +96,7 @@ const DocumentsPage = () => {
                 <div className="flex justify-between items-center mb-6">
                     <h2 className="text-3xl font-bold text-[#19154E]">Documents</h2>
                     <div className="flex items-center space-x-2">
-                        <label className="bg-[#193A83] text-white font-semibold px-4 py-2 rounded-lg cursor-pointer hover:bg-opacity-90 transition-colors flex items-center gap-2">
+                        <label className="bg-black text-white font-semibold px-4 py-2 rounded-lg cursor-pointer hover:bg-opacity-90 transition-colors flex items-center gap-2">
                             <FiUpload size={16} />
                             {uploading ? 'Uploading...' : 'Upload File'}
                             <input
@@ -164,7 +164,7 @@ const DocumentsPage = () => {
                                         {new Date(file.uploadDate).toLocaleDateString()}
                                     </div>
                                     <div className="col-span-1 flex items-center justify-end space-x-2">
-                                        <Link to={`/dashboard/documents/${file.id}`} className="bg-[#193A83] text-white text-xs font-semibold px-3 py-1.5 rounded-md hover:bg-opacity-90">Chat</Link>
+                                        <Link to={`/dashboard/documents/${file.id}`} className="bg-black text-white text-xs font-semibold px-3 py-1.5 rounded-md hover:bg-opacity-90">Chat</Link>
                                         <button className="text-gray-400 hover:text-gray-600 p-1"><FiEdit2 size={14}/></button>
                                         <button className="text-gray-400 hover:text-gray-600 p-1"><FiTrash2 size={14}/></button>
                                     </div>

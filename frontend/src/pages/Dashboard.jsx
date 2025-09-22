@@ -4,22 +4,24 @@ import { useDropzone } from 'react-dropzone';
 import { useNavigate } from 'react-router-dom';
 import { FiUpload, FiUploadCloud, FiX, FiFile, FiCheckCircle, FiSend, FiCopy } from 'react-icons/fi';
 import { useFileUpload } from '../hooks/useFileUpload';
+import { useAuth } from '../hooks/useAuth';
 
 const FileUploadModal = ({ closeModal }) => {
     const [files, setFiles] = useState([]);
     const navigate = useNavigate();
+    const { user } = useAuth(); 
     const { uploading, progress, error, uploadFile, resetUpload } = useFileUpload();
 
     const onDrop = useCallback(acceptedFiles => {
-        setFiles([acceptedFiles[0]]); // Only allow one file for this flow
+        setFiles([acceptedFiles[0]]);
     }, []);
 
     const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop, accept: {'application/pdf': ['.pdf']}, multiple: false });
 
     const handleUpload = async () => {
-        if (files.length === 0) return;
+        if (files.length === 0 || !user) return;
         
-        const result = await uploadFile(files[0]);
+        const result = await uploadFile(files[0], user.id); 
         
         if (result.success) {
             setTimeout(() => {

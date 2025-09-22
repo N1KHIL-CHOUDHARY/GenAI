@@ -6,7 +6,7 @@ export const useFileUpload = () => {
     const [progress, setProgress] = useState(0);
     const [error, setError] = useState(null);
 
-    const uploadFile = useCallback(async (file) => {
+    const uploadFile = useCallback(async (file, userId) => { // Modified: Add userId parameter
         setUploading(true);
         setProgress(0);
         setError(null);
@@ -23,8 +23,8 @@ export const useFileUpload = () => {
                 });
             }, 200);
 
-            // Call file service
-            const result = await fileService.uploadFile(file);
+            // Call file service with userId
+            const result = await fileService.uploadFile(file, userId); // Modified: Pass userId
 
             clearInterval(progressInterval);
             setProgress(100);
